@@ -1,0 +1,14 @@
+package com.tmdbtestapp.common.navigation
+
+import kotlinx.serialization.Serializable
+
+sealed interface NavRoute {
+    @Serializable
+    data object HomeNavRoute : NavRoute
+
+    @Serializable
+    data class DetailNavRoute(val movieId: Int) : NavRoute
+
+    @Serializable
+    data object PlayerNavRoute : NavRoute
+}
