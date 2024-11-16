@@ -7,7 +7,7 @@ data class SpokenLanguageDto(
     val englishName: String? = null,
 
     @SerializedName("iso_639_1")
-    val iso_639_1: String? = null,
+    val iso: String? = null,
 
     @SerializedName("name")
     val name: String? = null

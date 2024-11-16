@@ -2,26 +2,23 @@ package com.tmdbtestapp.ui.screen.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tmdbtestapp.common.utils.DataState
-import com.tmdbtestapp.common.utils.ErrorModel
 import com.tmdbtestapp.common.utils.State
 import com.tmdbtestapp.domain.entity.movie.Movie
 import com.tmdbtestapp.domain.useCase.getMyFavoritesMovies.GetMyFavoritesMoviesUseCase
 import com.tmdbtestapp.domain.useCase.getNowPlayingMovies.GetNowPlayingMoviesUseCase
 import com.tmdbtestapp.domain.useCase.getPopularMovies.GetPopularMoviesUseCase
-import com.tmdbtestapp.presentation.filtersRow.data.FiltersRowItemData
-import com.tmdbtestapp.ui.mapper.movieCardData.MovieCardDataMapper
+import com.tmdbtestapp.presentation.widgets.filtersRow.data.FiltersRowItemData
+import com.tmdbtestapp.ui.screen.home.mapper.MovieCardDataMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import javax.inject.Inject
 
@@ -30,14 +27,16 @@ class HomeViewModel @Inject constructor(
     private val movieCardDataMapper: MovieCardDataMapper,
     private val getPopularMovies: GetPopularMoviesUseCase,
     private val getNowPlayingMovies: GetNowPlayingMoviesUseCase,
-    private val getMyFavoritesMovies: GetMyFavoritesMoviesUseCase
+    getMyFavoritesMovies: GetMyFavoritesMoviesUseCase
 ) : ViewModel() {
+    private val scope = viewModelScope + Dispatchers.IO
 
-    private val isNeedToRefreshFlow = MutableStateFlow(true)
-    private val errorFlow = MutableStateFlow<ErrorModel?>(null)
+    private val isLoadingFlow = MutableStateFlow(false)
+    private val errorFlow = MutableStateFlow<Throwable?>(null)
 
     private val selectedFilterFlow =
         MutableStateFlow<FiltersRowItemData>(FiltersRowItemData.Popular)
+
     private val filtersFlow = MutableStateFlow(
         listOf(
             FiltersRowItemData.Popular,
@@ -46,45 +45,33 @@ class HomeViewModel @Inject constructor(
         )
     )
 
-    private val popularMoviesFlow = MutableStateFlow<List<Movie>?>(emptyList())
-    private val nowPlayingMoviesFlow = MutableStateFlow<List<Movie>?>(emptyList())
+    private val popularMoviesFlow = MutableStateFlow<List<Movie>>(emptyList())
+    private val nowPlayingMoviesFlow = MutableStateFlow<List<Movie>>(emptyList())
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val dataFlow = isNeedToRefreshFlow.flatMapLatest { isRefreshing ->
-        if (isRefreshing) {
-            errorFlow.tryEmit(null)
-            refresh()
+    private val dataFlow = combine(
+        selectedFilterFlow,
+        filtersFlow,
+        popularMoviesFlow,
+        nowPlayingMoviesFlow,
+        getMyFavoritesMovies()
+    ) { selectedFilter, filters, popularMovies, nowPlayingMovies, myFavoriteMovies ->
+        val movies = when (selectedFilter) {
+            FiltersRowItemData.Popular -> popularMovies
+            FiltersRowItemData.NowPlaying -> nowPlayingMovies
+            FiltersRowItemData.MyFavorites -> myFavoriteMovies
         }
 
-        combine(
-            selectedFilterFlow,
-            filtersFlow,
-            popularMoviesFlow,
-            nowPlayingMoviesFlow,
-            getMyFavoritesMovies()
-        ) { selectedFilter, filters, popularMovies, nowPlayingMovies, myFavoriteMovies ->
-            if (popularMovies.isNullOrEmpty() || nowPlayingMovies.isNullOrEmpty()) return@combine null
+        val mappedMovies = movies.map { movieCardDataMapper.map(it) }
 
-            val movies = when (selectedFilter) {
-                FiltersRowItemData.Popular -> popularMovies
-                FiltersRowItemData.NowPlaying -> nowPlayingMovies
-                FiltersRowItemData.MyFavorites -> myFavoriteMovies
-            }
-
-            val mappedMovies = movies.map { movieCardDataMapper.map(it) }
-
-            HomeScreenState(
-                selectedFilter = selectedFilter,
-                filtersList = filters,
-                movieGridItems = mappedMovies
-            )
-        }
-    }.onEach {
-        isNeedToRefreshFlow.tryEmit(false)
+        HomeScreenState(
+            selectedFilter = selectedFilter,
+            filtersList = filters,
+            movieGridItems = mappedMovies
+        )
     }
 
     val screenState = combineTransform(
-        isNeedToRefreshFlow,
+        isLoadingFlow,
         dataFlow,
         errorFlow
     ) { isNeedToRefresh, data, error ->
@@ -95,15 +82,16 @@ class HomeViewModel @Inject constructor(
 
         if (isNeedToRefresh) {
             emit(State.loading())
+            return@combineTransform
         }
 
-        data?.let {
-            emit(State.successes(data))
-        }
+        emit(State.successes(data))
+    }.onStart {
+        load()
     }.catch {
         it.printStackTrace()
-        emit(State.error(ErrorModel.unknown()))
-    }.stateIn(viewModelScope + Dispatchers.IO, SharingStarted.Eagerly, State.loading())
+        emit(State.error())
+    }.stateIn(scope, SharingStarted.Eagerly, State.loading())
 
     fun onEvent(event: HomeScreenUiEvent) {
         when (event) {
@@ -112,36 +100,33 @@ class HomeViewModel @Inject constructor(
             }
 
             HomeScreenUiEvent.Refresh -> {
-                isNeedToRefreshFlow.tryEmit(true)
+                scope.launch { load() }
             }
         }
     }
 
-    private suspend fun refresh() {
-        fun handleError(errorModel: ErrorModel) {
-            errorFlow.tryEmit(errorModel)
+    private suspend fun load() {
+        isLoadingFlow.tryEmit(true)
+        errorFlow.tryEmit(null)
+
+        fun handleError(e: Throwable) {
+            errorFlow.tryEmit(e)
         }
 
-        when (val popularMoviesResult = getPopularMovies()) {
-            is DataState.Error -> {
-                handleError(popularMoviesResult.errorModel)
-                return
-            }
-
-            is DataState.Success -> {
-                popularMoviesFlow.tryEmit(popularMoviesResult.data)
-            }
+        getPopularMovies().onSuccess {
+            popularMoviesFlow.tryEmit(it)
+        }.onFailure {
+            handleError(it)
+            return
         }
 
-        when (val nowPlayingMoviesResult = getNowPlayingMovies()) {
-            is DataState.Error -> {
-                handleError(nowPlayingMoviesResult.errorModel)
-                return
-            }
-
-            is DataState.Success -> {
-                nowPlayingMoviesFlow.tryEmit(nowPlayingMoviesResult.data)
-            }
+        getNowPlayingMovies().onSuccess {
+            nowPlayingMoviesFlow.tryEmit(it)
+        }.onFailure {
+            handleError(it)
+            return
         }
+
+        isLoadingFlow.tryEmit(false)
     }
 }

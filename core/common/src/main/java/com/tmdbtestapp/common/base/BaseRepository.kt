@@ -1,26 +1,25 @@
 package com.tmdbtestapp.common.base
 
-import com.tmdbtestapp.common.utils.DataState
-import com.tmdbtestapp.common.utils.ErrorModel
 import retrofit2.Response
 
+typealias Mapper<Input, Output> = (Input) -> Output
 
 abstract class BaseRepository {
     fun <I, O> obtain(
         response: Response<I?>,
         mapper: Mapper<I, O?>,
-    ): DataState<O> {
+    ): Result<O> {
         return try {
             if (!response.isSuccessful) {
-                return DataState.error(ErrorModel.create("Request failed"))
+                return Result.failure(Exception("Request failed"))
             }
 
-            val body = response.body() ?: return DataState.error(ErrorModel.EmptyBody)
-            val mappedResponseBody = mapper(body) ?: return DataState.error(ErrorModel.EmptyBody)
+            val body = response.body() ?: return Result.failure(Exception("EmptyBody"))
+            val mappedResponseBody = mapper(body) ?: return Result.failure(Exception("EmptyBody"))
 
-            DataState.success(mappedResponseBody)
+            Result.success(mappedResponseBody)
         } catch (e: Exception) {
-            DataState.error(ErrorModel.unknown())
+            Result.failure(e)
         }
     }
 }

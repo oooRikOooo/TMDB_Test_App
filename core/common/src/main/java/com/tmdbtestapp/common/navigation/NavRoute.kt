@@ -10,5 +10,5 @@ sealed interface NavRoute {
     data class DetailNavRoute(val movieId: Int) : NavRoute
 
     @Serializable
-    data object PlayerNavRoute : NavRoute
+    data class PlayerNavRoute(val movieId: Int) : NavRoute
 }

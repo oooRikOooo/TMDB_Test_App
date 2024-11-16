@@ -6,7 +6,7 @@ class ImageUrlManager {
     private val baseUrl = BuildConfig.IMAGE_BASE_URL
 
     fun getUrl(imagePath: String, size: ImageSize = ImageSize.Original): String {
-        return baseUrl + size.value + '/' + imagePath
+        return baseUrl + size.value + imagePath
     }
 }
 

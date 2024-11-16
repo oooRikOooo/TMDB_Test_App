@@ -25,10 +25,6 @@ class NetworkModule {
 
     @Provides
     @Singleton
-    fun provideApiInterceptor() = ApiInterceptor()
-
-    @Provides
-    @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
     }
@@ -43,7 +39,7 @@ class NetworkModule {
             .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
-            .addNetworkInterceptor(apiInterceptor)
+            .addInterceptor(apiInterceptor)
 
         if (BuildConfig.DEBUG) {
             okHttpClientBuilder.addNetworkInterceptor(loggingInterceptor)

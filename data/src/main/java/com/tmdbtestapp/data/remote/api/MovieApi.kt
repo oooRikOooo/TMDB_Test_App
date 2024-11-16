@@ -6,17 +6,22 @@ import com.tmdbtestapp.data.remote.entity.popularMovies.PopularMoviesDto
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 interface MovieApi {
-    @GET("movie/popular")
+    @GET(POPULAR_MOVIES)
     suspend fun getPopularMovies(): Response<PopularMoviesDto?>
 
-    @GET("movie/now_playing")
+    @GET(NOW_PLAYING_MOVIES)
     suspend fun getNowPlayingMovies(): Response<NowPlayingMoviesDto?>
 
-    @GET("movie/{movieId}")
+    @GET(MOVIE_DETAILS)
     suspend fun getMovieDetails(
         @Path("movieId") movieId: Int
     ): Response<MovieDetailsDto?>
+
+    companion object {
+        private const val POPULAR_MOVIES = "movie/popular"
+        private const val NOW_PLAYING_MOVIES = "movie/now_playing"
+        private const val MOVIE_DETAILS = "movie/{movieId}"
+    }
 }

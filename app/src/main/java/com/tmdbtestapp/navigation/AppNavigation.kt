@@ -11,6 +11,7 @@ import com.tmdbtestapp.ui.screen.detail.DetailScreen
 import com.tmdbtestapp.ui.screen.detail.DetailViewModel
 import com.tmdbtestapp.ui.screen.home.HomeScreen
 import com.tmdbtestapp.ui.screen.player.PlayerScreen
+import com.tmdbtestapp.ui.screen.player.PlayerViewModel
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
@@ -36,8 +37,16 @@ fun AppNavigation(navController: NavHostController) {
                 navigateTo = { navController.navigate(it) })
         }
 
-        composable<NavRoute.PlayerNavRoute> {
-            PlayerScreen()
+        composable<NavRoute.PlayerNavRoute> { entry ->
+            val player = entry.toRoute<NavRoute.PlayerNavRoute>()
+
+            val viewModel = hiltViewModel<PlayerViewModel, PlayerViewModel.PlayerViewModelFactory> {
+                it.create(player.movieId)
+            }
+
+            PlayerScreen(
+                viewModel = viewModel
+            )
         }
     }
 }

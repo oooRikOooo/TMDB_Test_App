@@ -18,6 +18,11 @@ android {
 
         buildConfigField("String", "BASE_URL", "\"https://api.themoviedb.org/3/\"")
         buildConfigField("String", "IMAGE_BASE_URL", "\"https://image.tmdb.org/t/p/\"")
+        buildConfigField(
+            "String",
+            "VIDEO_URL",
+            "\"https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8\""
+        )
     }
 
     buildTypes {
@@ -42,17 +47,7 @@ android {
 }
 
 dependencies {
-
-    implementation(libs.kotlinx.serialization.json)
-
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.retrofit2.retrofit)
-    implementation(libs.retrofit2.converter.gson)
-
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.compose.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

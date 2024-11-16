@@ -1,7 +1,7 @@
 package com.tmdbtestapp.ui.screen.home
 
-import com.tmdbtestapp.presentation.filtersRow.data.FiltersRowItemData
-import com.tmdbtestapp.presentation.movieCard.data.MovieCardData
+import com.tmdbtestapp.presentation.widgets.filtersRow.data.FiltersRowItemData
+import com.tmdbtestapp.presentation.widgets.movieCard.data.MovieCardData
 
 data class HomeScreenState(
     val selectedFilter: FiltersRowItemData,

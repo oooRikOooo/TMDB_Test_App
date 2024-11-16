@@ -1,7 +1,6 @@
 package com.tmdbtestapp.data.local.room.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import com.tmdbtestapp.data.local.room.entity.FavoriteMovieEntity

@@ -2,10 +2,10 @@ package com.tmdbtestapp.ui.screen.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -18,17 +18,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Text
+import androidx.tv.material3.MaterialTheme
 import com.tmdbtestapp.common.navigation.NavRoute
 import com.tmdbtestapp.common.utils.State
-import com.tmdbtestapp.presentation.errorContainer.ErrorContainer
-import com.tmdbtestapp.presentation.filtersRow.FiltersRow
-import com.tmdbtestapp.presentation.loadingContainer.LoadingContainer
-import com.tmdbtestapp.presentation.movieCard.MovieCard
+import com.tmdbtestapp.presentation.widgets.errorContainer.ErrorContainer
+import com.tmdbtestapp.presentation.widgets.filtersRow.FiltersRow
+import com.tmdbtestapp.presentation.widgets.loadingContainer.LoadingContainer
+import com.tmdbtestapp.presentation.widgets.movieCard.MovieCard
 
 @Composable
 fun HomeScreen(
@@ -74,18 +73,19 @@ private fun Content(
         modifier = Modifier
             .focusRequester(focusRequester)
             .fillMaxSize()
-            .background(Color.Black)
-            .padding(vertical = 12.dp),
+            .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         FiltersRow(
             selectedFilter = data.selectedFilter,
             filtersList = data.filtersList,
+            modifier = Modifier.padding(top = 16.dp, bottom = 12.dp),
             onFilterFocus = { onEvent(HomeScreenUiEvent.OnFilterFocus(it)) }
         )
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(6),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(12.dp)

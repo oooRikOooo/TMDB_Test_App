@@ -4,8 +4,8 @@ import com.google.gson.annotations.SerializedName
 
 data class DatesDto(
     @SerializedName("maximum")
-    val maximum: String,
+    val maximum: String? = null,
 
     @SerializedName("minimum")
-    val minimum: String
+    val minimum: String? = null
 )

@@ -1,16 +1,14 @@
 package com.tmdbtestapp.domain.useCase.getMovieDetails
 
-import com.tmdbtestapp.common.utils.DataState
-import com.tmdbtestapp.domain.entity.MovieDetails
+import com.tmdbtestapp.domain.entity.movie.Movie
 import com.tmdbtestapp.domain.repository.MovieRepository
-import kotlinx.coroutines.FlowPreview
 import javax.inject.Inject
 
-@OptIn(FlowPreview::class)
 class GetMovieDetailsUseCase @Inject constructor(
     private val movieRepository: MovieRepository
 ) {
-    suspend operator fun invoke(id: Int): DataState<MovieDetails> {
+    // For future maintenance
+    suspend operator fun invoke(id: Int): Result<Movie> {
         return movieRepository.getMovieDetails(id)
     }
 }

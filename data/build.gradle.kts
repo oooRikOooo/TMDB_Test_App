@@ -47,7 +47,6 @@ android {
 }
 
 dependencies {
-
     implementation(project(":core:common"))
     implementation(project(":domain"))
 
@@ -62,9 +61,4 @@ dependencies {
 
     implementation(libs.retrofit2.retrofit)
     implementation(libs.gson.gson)
-
-    implementation(libs.androidx.core.ktx)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

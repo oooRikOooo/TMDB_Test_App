@@ -2,28 +2,23 @@ package com.tmdbtestapp.ui.screen.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tmdbtestapp.common.utils.DataState
-import com.tmdbtestapp.common.utils.ErrorModel
 import com.tmdbtestapp.common.utils.State
-import com.tmdbtestapp.domain.entity.MovieDetails
+import com.tmdbtestapp.domain.entity.movie.Movie
 import com.tmdbtestapp.domain.useCase.getMovieDetails.GetMovieDetailsUseCase
 import com.tmdbtestapp.domain.useCase.getMovieFavoriteState.GetMovieFavoriteStateUseCase
 import com.tmdbtestapp.domain.useCase.toggleMovieFavoriteState.ToggleMovieFavoriteStateUseCase
-import com.tmdbtestapp.presentation.movieBanner.data.MovieBannerData
-import com.tmdbtestapp.ui.mapper.movieBannerData.MovieBannerDataMapper
+import com.tmdbtestapp.ui.screen.detail.mapper.MovieBannerDataMapper
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -33,41 +28,30 @@ class DetailViewModel @AssistedInject constructor(
     @Assisted val id: Int,
     private val movieBannerDataMapper: MovieBannerDataMapper,
     private val getMovieDetails: GetMovieDetailsUseCase,
-    private val getMovieFavoriteState: GetMovieFavoriteStateUseCase,
+    getMovieFavoriteState: GetMovieFavoriteStateUseCase,
     private val toggleMovieFavoriteState: ToggleMovieFavoriteStateUseCase
 ) : ViewModel() {
+    private val scope = viewModelScope + Dispatchers.IO
 
-    private val isNeedToRefreshFlow = MutableStateFlow(true)
-    private val errorFlow = MutableStateFlow<ErrorModel?>(null)
+    private val isLoadingFlow = MutableStateFlow(false)
+    private val errorFlow = MutableStateFlow<Throwable?>(null)
 
-    private val movieDetailsFlow = MutableStateFlow<MovieDetails?>(null)
+    private val movieDetailsFlow = MutableStateFlow(Movie.empty())
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val dataFlow = isNeedToRefreshFlow.flatMapLatest { isRefreshing ->
+    private val dataFlow = combine(
+        movieDetailsFlow,
+        getMovieFavoriteState(id)
+    ) { movieDetail, isFavorite ->
+        val mappedMovieDetails = movieBannerDataMapper.map(movieDetail)
 
-        if (isRefreshing) {
-            errorFlow.tryEmit(null)
-            refresh()
-        }
-
-        combine(
-            movieDetailsFlow,
-            getMovieFavoriteState(id)
-        ) { movieDetail, isFavorite ->
-            movieDetail ?: return@combine null
-
-            val mappedMovieDetails = movieBannerDataMapper.map(movieDetail)
-            DetailScreenState(
-                movie = mappedMovieDetails,
-                isFavorite = isFavorite
-            )
-        }.onEach {
-            isNeedToRefreshFlow.tryEmit(false)
-        }
+        DetailScreenState(
+            movie = mappedMovieDetails,
+            isFavorite = isFavorite
+        )
     }
 
     val screenData = combineTransform(
-        isNeedToRefreshFlow,
+        isLoadingFlow,
         dataFlow,
         errorFlow
     ) { isNeedToRefresh, data, error ->
@@ -76,15 +60,18 @@ class DetailViewModel @AssistedInject constructor(
             return@combineTransform
         }
 
-        if (isNeedToRefresh) emit(State.loading())
-
-        data?.let {
-            emit(State.successes(it))
+        if (isNeedToRefresh) {
+            emit(State.loading())
+            return@combineTransform
         }
+
+        emit(State.successes(data))
+    }.onStart {
+        load()
     }.catch {
         it.printStackTrace()
-        emit(State.error(ErrorModel.unknown()))
-    }.stateIn(viewModelScope + Dispatchers.IO, SharingStarted.Eagerly, State.loading())
+        emit(State.error())
+    }.stateIn(scope, SharingStarted.Eagerly, State.loading())
 
     fun onEvent(event: DetailScreenUiEvent) {
         when (event) {
@@ -93,28 +80,27 @@ class DetailViewModel @AssistedInject constructor(
             }
 
             DetailScreenUiEvent.Refresh -> {
-                isNeedToRefreshFlow.tryEmit(true)
+                scope.launch { load() }
             }
         }
     }
 
-    private suspend fun refresh() {
-        when (val result = getMovieDetails(id)) {
-            is DataState.Error -> {
-                errorFlow.tryEmit(result.errorModel)
-            }
+    private suspend fun load() {
+        isLoadingFlow.tryEmit(true)
+        errorFlow.tryEmit(null)
 
-            is DataState.Success -> {
-                movieDetailsFlow.tryEmit(result.data)
-            }
+        getMovieDetails(id).onSuccess {
+            movieDetailsFlow.tryEmit(it)
+        }.onFailure {
+            errorFlow.tryEmit(it)
         }
+
+        isLoadingFlow.tryEmit(false)
     }
 
     private fun toggleFavoriteState() {
         viewModelScope.launch {
-            movieDetailsFlow.value?.let {
-                toggleMovieFavoriteState(it)
-            }
+            toggleMovieFavoriteState(movieDetailsFlow.value)
         }
     }
 

@@ -3,10 +3,8 @@
     <string name="popular">Popular</string>
     <string name="now_playing">Now Playing</string>
     <string name="my_favorites">My Favorites</string>
-    <string name="title">Title</string>
-    <string name="description">Description</string>
     <string name="release_date">Release date</string>
-    <string name="average_voe">Average vote</string>
+    <string name="average_vote">Average vote</string>
     <string name="genres">Genres</string>
     <string name="watch_trailer">Watch Trailer</string>
     <string name="add_to_favorites">Add to favorites</string>
